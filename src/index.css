@@ -69,7 +69,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: var(--gradient-soft);
+    background-image: var(--gradient-mesh), var(--gradient-soft);
+    background-attachment: fixed;
     min-height: 100vh;
   }
 }
@@ -92,6 +93,29 @@
   .btn-gradient:hover {
     box-shadow: var(--shadow-elegant);
     transform: translateY(-1px);
+  }
+  .text-gradient {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero-banner {
+    background: var(--gradient-hero);
+    color: hsl(var(--primary-foreground));
+    border-radius: 1.5rem;
+    box-shadow: var(--shadow-elegant);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-banner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(at 20% 20%, hsl(0 0% 100% / 0.18) 0px, transparent 45%),
+      radial-gradient(at 80% 80%, hsl(0 0% 100% / 0.12) 0px, transparent 45%);
+    pointer-events: none;
   }
 }
 
