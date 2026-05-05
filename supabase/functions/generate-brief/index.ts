@@ -1,4 +1,7 @@
-import { corsHeaders } from "../_shared/cors.ts";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const SYSTEM_PROMPT = `You are InterviewReady AI, a senior interview coach. Given a candidate's resume and a job description, produce a focused, practical 1-page interview prep brief. Be concrete, specific to the candidate's actual experience, and never generic. Use the provided tool to return structured JSON.`;
 
