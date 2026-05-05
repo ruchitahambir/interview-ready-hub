@@ -27,8 +27,8 @@ export const AppHeader = () => {
             <Sparkles className="w-5 h-5" />
           </div>
           <div className="leading-tight">
-            <div className="font-semibold text-foreground">InterviewReady</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">AI Coach · v1</div>
+            <div className="font-semibold text-foreground">OfferPilot <span className="text-gradient">AI</span></div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Interview Coach · v1</div>
           </div>
         </Link>
         <nav className="flex items-center gap-1">
