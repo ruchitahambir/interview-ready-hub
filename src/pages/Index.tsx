@@ -70,17 +70,19 @@ const Index = () => {
     <>
       <AppHeader />
       <main className="container max-w-6xl mx-auto px-4 py-10 md:py-16">
-        <section className="text-center mb-10 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium mb-4">
-            <Sparkles className="w-3.5 h-3.5" /> Your AI interview coach
+        <section className="hero-banner text-center mb-10 px-6 py-12 md:py-16">
+          <div className="relative z-10 max-w-2xl mx-auto">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-primary-foreground text-xs font-medium mb-4 border border-white/20">
+              <Sparkles className="w-3.5 h-3.5" /> Your AI interview coach
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-primary-foreground mb-3">
+              Walk in ready. Walk out hired.
+            </h1>
+            <p className="text-primary-foreground/85 text-lg">
+              Upload your resume and the job description. Get a personalized 1-page prep brief in seconds —
+              tailored questions, draft answers, and gaps to address.
+            </p>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-3">
-            Walk in ready. Walk out hired.
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Upload your resume and the job description. Get a personalized 1-page prep brief in seconds —
-            tailored questions, draft answers, and gaps to address.
-          </p>
         </section>
 
         <section className="grid md:grid-cols-2 gap-5">
