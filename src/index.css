@@ -35,16 +35,21 @@
     --destructive: 0 78% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 90%;
-    --input: 220 20% 90%;
-    --ring: 18 90% 56%;
+    --border: 220 22% 88%;
+    --input: 220 22% 88%;
+    --ring: 224 76% 38%;
 
     --radius: 0.875rem;
 
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-soft: linear-gradient(180deg, hsl(30 50% 99%), hsl(220 40% 97%));
-    --shadow-soft: 0 4px 16px -4px hsl(222 30% 14% / 0.06), 0 2px 6px -2px hsl(222 30% 14% / 0.04);
-    --shadow-elegant: 0 20px 50px -20px hsl(18 90% 56% / 0.25);
+    --gradient-primary: linear-gradient(135deg, hsl(224 76% 38%), hsl(250 84% 60%));
+    --gradient-hero: linear-gradient(135deg, hsl(224 76% 32%) 0%, hsl(250 84% 52%) 50%, hsl(280 70% 55%) 100%);
+    --gradient-soft: linear-gradient(180deg, hsl(220 50% 99%) 0%, hsl(220 40% 96%) 100%);
+    --gradient-mesh:
+      radial-gradient(at 10% 0%, hsl(224 90% 92% / 0.8) 0px, transparent 50%),
+      radial-gradient(at 90% 10%, hsl(250 90% 92% / 0.7) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, hsl(165 70% 92% / 0.6) 0px, transparent 50%);
+    --shadow-soft: 0 4px 16px -4px hsl(224 47% 11% / 0.08), 0 2px 6px -2px hsl(224 47% 11% / 0.05);
+    --shadow-elegant: 0 20px 50px -20px hsl(224 76% 38% / 0.35);
     --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 0 0% 98%;
