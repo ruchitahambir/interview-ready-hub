@@ -11,11 +11,26 @@ import { toast } from "sonner";
 const Brief = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [saved, setSaved] = useState<SavedBrief | undefined>();
+  const [saved, setSaved] = useState<SavedBrief | undefined>(() =>
+    id ? getBrief(id) : undefined
+  );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (id) setSaved(getBrief(id));
+    setLoading(false);
   }, [id]);
+
+  if (loading) {
+    return (
+      <>
+        <AppHeader />
+        <div className="container max-w-2xl mx-auto px-4 py-16 text-center text-muted-foreground">
+          Loading brief…
+        </div>
+      </>
+    );
+  }
 
   if (!saved) {
     return (
