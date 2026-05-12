@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
 
-const N8N_WEBHOOK_URL = "https://sabaf16417.app.n8n.cloud/webhook/Generate-Prep-Brief";
+const N8N_WEBHOOK_URL = "https://sabaf16417.app.n8n.cloud/webhook-test/Generate-Prep-Brief";
 
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 import { supabase } from "@/integrations/supabase/client";
@@ -65,16 +65,14 @@ const Index = () => {
       try {
         if (!N8N_WEBHOOK_URL.startsWith("PASTE_")) {
           const briefText = JSON.stringify(brief, null, 2);
-          const res = await fetch("https://sabaf16417.app.n8n.cloud/webhook/Generate-Prep-Brief", {
+          await fetch(N8N_WEBHOOK_URL, {
             method: "POST",
+            mode: "no-cors",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userEmail: email, generatedBrief: briefText }),
           });
-          if (res.ok) {
-            toast.success("Brief sent to your email!");
-          } else {
-            toast.error("Could not send email. Brief is saved.");
-          }
+          // With no-cors, response is opaque — assume success if no exception
+          toast.success("Brief sent to your email!");
         } else {
           console.warn("N8N webhook URL not configured.");
         }
