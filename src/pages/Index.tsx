@@ -4,7 +4,14 @@ import { AppHeader } from "@/components/AppHeader";
 import { UploadCard } from "@/components/UploadCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
+
+// TODO: Replace with your actual n8n webhook URL
+const N8N_WEBHOOK_URL = "PASTE_YOUR_N8N_WEBHOOK_URL_HERE";
+
+const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 import { supabase } from "@/integrations/supabase/client";
 import { getSettings } from "@/lib/settings";
 import { saveBrief } from "@/lib/history";
@@ -17,9 +24,14 @@ const Index = () => {
   const [resumeName, setResumeName] = useState("");
   const [jd, setJd] = useState("");
   const [jdName, setJdName] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const canSubmit = resume.trim().length > 50 && jd.trim().length > 50 && !loading;
+  const canSubmit =
+    resume.trim().length > 50 &&
+    jd.trim().length > 50 &&
+    isValidEmail(email) &&
+    !loading;
 
   const handleGenerate = async () => {
     if (!canSubmit) return;
@@ -49,6 +61,29 @@ const Index = () => {
         jdPreview: jd.slice(0, 200),
       };
       saveBrief(saved);
+
+      // Fire-and-forward to n8n webhook (don't block navigation on failure)
+      try {
+        if (N8N_WEBHOOK_URL && !N8N_WEBHOOK_URL.startsWith("PASTE_")) {
+          const briefText = JSON.stringify(brief, null, 2);
+          const res = await fetch(N8N_WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userEmail: email, briefText }),
+          });
+          if (res.ok) {
+            toast.success("Brief sent to your email!");
+          } else {
+            toast.error("Could not send email. Brief is saved.");
+          }
+        } else {
+          console.warn("N8N webhook URL not configured.");
+        }
+      } catch (webhookErr) {
+        console.error("Webhook error:", webhookErr);
+        toast.error("Email delivery failed. Brief is saved.");
+      }
+
       navigate(`/brief/${id}`);
     } catch (e) {
       console.error(e);
