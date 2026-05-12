@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
 
-// TODO: Replace with your actual n8n webhook URL
-const N8N_WEBHOOK_URL = "PASTE_YOUR_N8N_WEBHOOK_URL_HERE";
+const N8N_WEBHOOK_URL = "https://sabaf16417.app.n8n.cloud/webhook/Generate-Prep-Brief";
 
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 import { supabase } from "@/integrations/supabase/client";
