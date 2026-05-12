@@ -141,19 +141,42 @@ const Index = () => {
           />
         </section>
 
-        <div className="mt-8 flex flex-col items-center gap-3">
+        <div className="mt-8 max-w-md mx-auto space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium">
+            Your email (to receive the brief)
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-11"
+          />
+        </div>
+
+        <div className="mt-6 flex flex-col items-center gap-3">
           <Button
             size="lg"
             disabled={!canSubmit}
             onClick={handleGenerate}
             className="btn-gradient text-base font-semibold px-8 h-12 rounded-xl"
           >
-            Generate Prep Brief
-            <ArrowRight className="w-4 h-4 ml-2" />
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating…
+              </>
+            ) : (
+              <>
+                Generate Prep Brief
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            )}
           </Button>
-          {!canSubmit && (
+          {!canSubmit && !loading && (
             <p className="text-xs text-muted-foreground">
-              Add both your resume and the job description to continue.
+              Add your resume, the job description, and a valid email to continue.
             </p>
           )}
         </div>
