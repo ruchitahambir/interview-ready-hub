@@ -68,7 +68,7 @@ const Index = () => {
           const res = await fetch("https://sabaf16417.app.n8n.cloud/webhook/Generate-Prep-Brief", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userEmail: email, briefText }),
+            body: JSON.stringify({ userEmail: email, generatedBrief: briefText }),
           });
           if (res.ok) {
             toast.success("Brief sent to your email!");
