@@ -64,9 +64,9 @@ const Index = () => {
 
       // Fire-and-forward to n8n webhook (don't block navigation on failure)
       try {
-        if (N8N_WEBHOOK_URL && !N8N_WEBHOOK_URL.startsWith("PASTE_")) {
+        if (!N8N_WEBHOOK_URL.startsWith("PASTE_")) {
           const briefText = JSON.stringify(brief, null, 2);
-          const res = await fetch(N8N_WEBHOOK_URL, {
+          const res = await fetch("https://sabaf16417.app.n8n.cloud/webhook/Generate-Prep-Brief", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userEmail: email, briefText }),
