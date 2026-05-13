@@ -1,7 +1,8 @@
 import { PrepBrief } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertTriangle, MessageSquare, Sparkles, Target } from "lucide-react";
+import { AlertTriangle, MessageSquare, Sparkles, Target, Gauge } from "lucide-react";
 
 interface Props {
   brief: PrepBrief;
@@ -12,6 +13,28 @@ const priorityColor = (p: string) => {
   if (p === "high") return "bg-destructive/10 text-destructive border-destructive/20";
   if (p === "medium") return "bg-warning/15 text-warning-foreground border-warning/30";
   return "bg-secondary text-muted-foreground border-border";
+};
+
+const fitScoreStyles = (color: "green" | "amber" | "red") => {
+  switch (color) {
+    case "green":
+      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 [&>svg]:text-emerald-600";
+    case "amber":
+      return "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 [&>svg]:text-amber-600";
+    case "red":
+      return "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300 [&>svg]:text-red-600";
+  }
+};
+
+const fitBadgeStyles = (color: "green" | "amber" | "red") => {
+  switch (color) {
+    case "green":
+      return "bg-emerald-600 hover:bg-emerald-600 text-white border-transparent";
+    case "amber":
+      return "bg-amber-500 hover:bg-amber-500 text-white border-transparent";
+    case "red":
+      return "bg-red-600 hover:bg-red-600 text-white border-transparent";
+  }
 };
 
 export const BriefView = ({ brief, createdAt }: Props) => {
