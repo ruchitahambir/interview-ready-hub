@@ -88,17 +88,89 @@ const tool = {
   },
 };
 
+// Simple in-memory rate limiter (per edge instance). Best-effort; resets on cold start.
+const RATE_LIMIT_MAX = 5; // requests
+const RATE_LIMIT_WINDOW_MS = 60_000; // per minute
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string): { allowed: boolean; retryAfter: number } {
+  const now = Date.now();
+  const bucket = rateBuckets.get(key);
+  if (!bucket || now > bucket.resetAt) {
+    rateBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, retryAfter: 0 };
+  }
+  if (bucket.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) };
+  }
+  bucket.count += 1;
+  return { allowed: true, retryAfter: 0 };
+}
+
+const MAX_BYTES = 5 * 1024 * 1024; // 5 MB total payload
+const MAX_FIELD_CHARS = 50_000; // per-field cap (resume / JD)
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { resume, jobDescription, userApiKey, userProvider } = await req.json();
+    // Rate limit by client IP (best-effort)
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      req.headers.get("cf-connecting-ip") ||
+      "unknown";
+    const rl = checkRateLimit(ip);
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ error: `Rate limit exceeded. Try again in ${rl.retryAfter}s.` }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(rl.retryAfter),
+          },
+        },
+      );
+    }
+
+    // Enforce payload size limit (5 MB)
+    const contentLength = Number(req.headers.get("content-length") || 0);
+    if (contentLength && contentLength > MAX_BYTES) {
+      return new Response(
+        JSON.stringify({ error: "Payload too large. Maximum 5 MB." }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_BYTES) {
+      return new Response(
+        JSON.stringify({ error: "Payload too large. Maximum 5 MB." }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const { resume, jobDescription, userApiKey, userProvider } = JSON.parse(rawBody);
 
     if (!resume || !jobDescription) {
       return new Response(JSON.stringify({ error: "resume and jobDescription are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (typeof resume !== "string" || typeof jobDescription !== "string") {
+      return new Response(JSON.stringify({ error: "resume and jobDescription must be strings" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (resume.length > MAX_FIELD_CHARS || jobDescription.length > MAX_FIELD_CHARS) {
+      return new Response(
+        JSON.stringify({ error: `Input too large. Maximum ${MAX_FIELD_CHARS} characters per field.` }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const userPrompt = `=== RESUME ===\n${resume}\n\n=== JOB DESCRIPTION ===\n${jobDescription}\n\nProduce the interview prep brief now using the build_prep_brief tool.`;
