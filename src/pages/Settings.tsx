@@ -73,7 +73,8 @@ const Settings = () => {
               autoComplete="off"
             />
             <p className="text-xs text-muted-foreground">
-              Stored locally in your browser only. Sent only to power your AI requests.
+              Stored only in this browser tab's session storage and cleared when you close the tab.
+              For safety, use a scoped API key with a low spending limit.
             </p>
           </div>
 
