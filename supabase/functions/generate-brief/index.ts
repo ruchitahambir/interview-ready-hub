@@ -25,6 +25,17 @@ const tool = {
         role: { type: "string", description: "The role being interviewed for" },
         company: { type: "string", description: "Company name if detectable, else empty string" },
         snapshot: { type: "string", description: "2-3 sentence summary of candidate fit for this role" },
+        fit_Score: {
+          type: "object",
+          description: "Objective fit score (0-10) measuring resume vs JD alignment.",
+          properties: {
+            score: { type: "integer", minimum: 0, maximum: 10 },
+            color: { type: "string", enum: ["green", "amber", "red"] },
+            reasoning: { type: "string", description: "1-2 sentence critical, objective justification. Do not sugarcoat missing must-have skills." },
+          },
+          required: ["score", "color", "reasoning"],
+          additionalProperties: false,
+        },
         questions: {
           type: "array",
           description: "8-12 likely interview questions, prioritized",
