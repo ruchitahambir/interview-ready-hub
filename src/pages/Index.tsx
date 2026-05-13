@@ -69,7 +69,11 @@ const Index = () => {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userEmail: email, generatedBrief: briefText }),
+            body: JSON.stringify({
+              userEmail: email,
+              generatedBrief: briefText,
+              fit_Score: brief.fit_Score,
+            }),
           });
           // With no-cors, response is opaque — assume success if no exception
           toast.success("Brief sent to your email!");
