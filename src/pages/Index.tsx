@@ -108,10 +108,10 @@ const Index = () => {
               <Sparkles className="w-3.5 h-3.5" /> Your AI interview coach
             </div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-primary-foreground mb-3">
-              Walk in ready. Walk out hired.
+              Filter the best talent in seconds.
             </h1>
             <p className="text-primary-foreground/85 text-lg">
-              Upload your resume and the job description. Get a personalized 1-page prep brief in seconds —
+              Stop spending 4 hours screening applications-Upload your resume and the job description. Get a personalized 1-page prep brief in seconds —
               tailored questions, draft answers, and gaps to address.
             </p>
           </div>
