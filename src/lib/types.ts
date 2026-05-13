@@ -14,10 +14,17 @@ export interface BriefRedFlag {
   how_to_address: string;
 }
 
+export interface FitScore {
+  score: number;
+  color: "green" | "amber" | "red";
+  reasoning: string;
+}
+
 export interface PrepBrief {
   role: string;
   company: string;
   snapshot: string;
+  fit_Score?: FitScore;
   questions: BriefQuestion[];
   suggested_answers: BriefAnswer[];
   red_flags: BriefRedFlag[];

@@ -3,7 +3,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are InterviewReady AI, a senior interview coach. Given a candidate's resume and a job description, produce a focused, practical 1-page interview prep brief. Be concrete, specific to the candidate's actual experience, and never generic. Use the provided tool to return structured JSON.`;
+const SYSTEM_PROMPT = `You are PrepIQ, a senior recruiter and interview coach. Given a candidate's resume and a job description, produce a focused, practical 1-page interview prep brief. Be concrete, specific to the candidate's actual experience, and never generic.
+
+You MUST also compute a Fit Score (0-10) measuring alignment between Resume and JD using this rubric:
+- 8-10 ("green"): Meets ALL mandatory technical skills; direct industry experience.
+- 5-7 ("amber"): Good foundation; minor tool expertise or experience gaps.
+- 0-4 ("red"): Major misalignment with core technical requirements.
+
+Tone for the Fit Score: Objective and critical. Do NOT sugarcoat missing 'must-have' skills — call them out explicitly in the reasoning (1-2 sentences).
+
+Return everything via the build_prep_brief tool.`;
 
 const tool = {
   type: "function",
@@ -16,6 +25,17 @@ const tool = {
         role: { type: "string", description: "The role being interviewed for" },
         company: { type: "string", description: "Company name if detectable, else empty string" },
         snapshot: { type: "string", description: "2-3 sentence summary of candidate fit for this role" },
+        fit_Score: {
+          type: "object",
+          description: "Objective fit score (0-10) measuring resume vs JD alignment.",
+          properties: {
+            score: { type: "integer", minimum: 0, maximum: 10 },
+            color: { type: "string", enum: ["green", "amber", "red"] },
+            reasoning: { type: "string", description: "1-2 sentence critical, objective justification. Do not sugarcoat missing must-have skills." },
+          },
+          required: ["score", "color", "reasoning"],
+          additionalProperties: false,
+        },
         questions: {
           type: "array",
           description: "8-12 likely interview questions, prioritized",
@@ -62,7 +82,7 @@ const tool = {
           items: { type: "string" },
         },
       },
-      required: ["role", "company", "snapshot", "questions", "suggested_answers", "red_flags", "talking_points"],
+      required: ["role", "company", "snapshot", "fit_Score", "questions", "suggested_answers", "red_flags", "talking_points"],
       additionalProperties: false,
     },
   },
