@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
 
-const N8N_WEBHOOK_URL = "https://sabaf16417.app.n8n.cloud/webhook-test/Generate-Prep-Brief";
+const N8N_WEBHOOK_URL = "https://sabaf16417.app.n8n.cloud/webhook/Generate-Prep-Brief";
 
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 import { supabase } from "@/integrations/supabase/client";
