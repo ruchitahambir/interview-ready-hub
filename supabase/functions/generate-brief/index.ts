@@ -82,7 +82,7 @@ const tool = {
           items: { type: "string" },
         },
       },
-      required: ["role", "company", "snapshot", "questions", "suggested_answers", "red_flags", "talking_points"],
+      required: ["role", "company", "snapshot", "fit_Score", "questions", "suggested_answers", "red_flags", "talking_points"],
       additionalProperties: false,
     },
   },
