@@ -250,6 +250,35 @@ Deno.serve(async (req) => {
 
     const brief = JSON.parse(toolCall.function.arguments);
 
+    // Defensive fallback: guarantee fit_Score is present and well-formed
+    const fs = brief.fit_Score;
+    const validColor = (c: unknown) => c === "green" || c === "amber" || c === "red";
+    if (
+      !fs ||
+      typeof fs.score !== "number" ||
+      !validColor(fs.color) ||
+      typeof fs.reasoning !== "string"
+    ) {
+      const score = typeof fs?.score === "number" ? Math.max(0, Math.min(10, Math.round(fs.score))) : 5;
+      const color = score >= 8 ? "green" : score >= 5 ? "amber" : "red";
+      brief.fit_Score = {
+        score,
+        color,
+        reasoning:
+          typeof fs?.reasoning === "string" && fs.reasoning.trim()
+            ? fs.reasoning
+            : "Fit score auto-derived: model did not return a structured score. Review resume vs JD manually for must-have skill coverage.",
+      };
+    } else {
+      // Re-align color to score band to keep them consistent.
+      const s = Math.max(0, Math.min(10, Math.round(fs.score)));
+      brief.fit_Score = {
+        score: s,
+        color: s >= 8 ? "green" : s >= 5 ? "amber" : "red",
+        reasoning: fs.reasoning,
+      };
+    }
+
     return new Response(JSON.stringify({ brief }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
