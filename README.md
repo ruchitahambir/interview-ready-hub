@@ -1,4 +1,8 @@
 🚀 PrepIQ - AI-Powered Interview Assistant
+<p align="center">
+  <img width="250" " alt="PrepIQ Icon" src="https://github.com/user-attachments/assets/8cca6526-e2ff-434e-974c-61de2aa9870d" />
+</p>
+
 PrepIQ is a streamlined application designed to help job seekers prepare for interviews by generating personalized interview briefs. By analyzing a user's Resume and the Job Description (JD), the app provides actionable insights directly on the dashboard and delivers a copy via email.
 
 🛠️ Tech Stack
@@ -59,8 +63,18 @@ Run the development server:
 
 Bash
 bun run dev
-📸 Screenshots
-(Add screenshots of your UI and n8n workflow here for better visual appeal)
+
+PrepIQ - Landing Page 
+
+<img src="https://github.com/user-attachments/assets/e3977b35-af95-4d2b-90ce-0e0c55df1b65" alt="UI-PrepIQ"  width="600">
+
+PrepIQ- One Page Brief Generated 
+
+<img width="600" alt="UI-Brief page" src="https://github.com/user-attachments/assets/bf0d1ec1-72c3-4b2d-9cfe-b36607527e91" />
+
+N8n Workflow:
+
+<img width="600" alt="n8n-workflow" src="https://github.com/user-attachments/assets/2519a6b9-8ca5-4a95-a6be-64098517447b" />
 
 🤝 Contributing
 Feel free to open issues or submit pull requests to help improve the AI prompt logic or UI components.
