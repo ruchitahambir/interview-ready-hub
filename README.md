@@ -1,9 +1,19 @@
-🚀 PrepIQ - AI-Powered Interview Assistant
+🚀 PrepIQ - AI-Powered Candidate Filtering
 <p align="center">
   <img width="250" " alt="PrepIQ Icon" src="https://github.com/user-attachments/assets/8cca6526-e2ff-434e-974c-61de2aa9870d" />
 </p>
 
-PrepIQ is a streamlined application designed to help job seekers prepare for interviews by generating personalized interview briefs. By analyzing a user's Resume and the Job Description (JD), the app provides actionable insights directly on the dashboard and delivers a copy via email.
+🎯 The Problem & The Solution
+
+The Problem: Recruiters and HR professionals often spend 30-60 minutes manually cross-referencing a single candidate's resume against a complex Job Description. In high-volume hiring, this becomes a major bottleneck.
+
+The Solution: PrepIQ automates this initial "Eligibility Check." By feeding the resume and JD into our AI-driven pipeline, the recruiter receives a formatted, one-page brief in seconds. This allows for:
+
+Faster Shortlisting: Identify "Perfect Match" candidates instantly.
+
+Data-Driven Decisions: Objective comparison based on JD requirements.
+
+Standardized Briefs: Every candidate gets an identical summary format for easy comparison.
 
 ****************************************************************************************************************************************************************************
 🛠️ Tech Stack
