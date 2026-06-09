@@ -3,19 +3,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are PrepIQ, a senior recruiter and interview coach. Given a candidate's resume and a job description, produce a focused, practical 1-page interview prep brief. Be concrete, specific to the candidate's actual experience, and never generic.
+const SYSTEM_PROMPT = `You are PrepIQ, a senior recruiter and interview coach. Given a candidate's resume, a job description, and an optional list of recruiter-defined custom skill weights, produce a focused, practical 1-page screening brief. Be concrete, specific to the candidate's actual experience, and never generic.
 
-CRITICAL — Fit Score is MANDATORY. You MUST always populate the "fit_Score" field on every response. Never omit it. Never leave it null. Compute it as a JSON object with this exact shape:
-{ "score": <integer 0-10>, "color": "green" | "amber" | "red", "reasoning": "<1-2 sentence critical justification>" }
+CRITICAL — Always populate these MANDATORY fields:
 
-Scoring rubric (apply strictly):
-- 8-10 ("green"): Meets ALL mandatory technical skills; direct industry experience.
-- 5-7 ("amber"): Good foundation; minor tool expertise or experience gaps.
-- 0-4 ("red"): Major misalignment with core technical requirements.
+1. "fit_Score" (objective resume-vs-JD alignment):
+   { "score": <integer 0-10>, "color": "green" | "amber" | "red", "reasoning": "<1-2 sentence critical justification>" }
+   Bands: 8-10 green (meets all mandatory + direct industry exp), 5-7 amber (minor gaps), 0-4 red (major misalignment).
+   Color MUST match the score band exactly. Be critical; never sugarcoat missing must-haves.
 
-The color MUST match the score band exactly. Tone for the reasoning: objective and critical. Do NOT sugarcoat missing must-have skills — call them out explicitly.
+2. "match_score" (weighted custom score 0-100 based on recruiter skill weights):
+   { "score": <integer 0-100>, "color": "green"|"amber"|"red", "reasoning": "<1-2 sentences>", "dealbreakers_missed": [<list of must-have skills the candidate clearly lacks>] }
+   - Each non-dealbreaker skill contributes proportional to its weight (1-5). Compute as: sum(weight * coverage[0..1]) / sum(weights) * 100.
+   - Any unmet "dealbreaker" (must-have) skill must HEAVILY penalize the score (cap at 40) and be listed in dealbreakers_missed.
+   - If no custom skill weights are provided, mirror the fit_Score: match_score.score = fit_Score.score * 10, same color, brief reasoning, dealbreakers_missed: [].
+   - Color bands: 75-100 green, 45-74 amber, 0-44 red.
 
-Return everything via the build_prep_brief tool. The tool call WILL BE REJECTED if fit_Score is missing or malformed.`;
+3. "targeted_screening_questions" — an array of 3-5 SPECIFIC HR screening questions the recruiter should ask. Each question MUST directly probe a gap, discrepancy, weak point, or unverified claim identified between this candidate's resume and the JD (and any unmet skill weights). Do NOT include generic behavioral fluff. Make each question concrete enough that a vague answer would expose the gap.
+
+Return everything via the build_prep_brief tool. The tool call WILL BE REJECTED if any mandatory field is missing or malformed.`;
 
 const tool = {
   type: "function",
@@ -25,29 +31,39 @@ const tool = {
     parameters: {
       type: "object",
       properties: {
-        role: { type: "string", description: "The role being interviewed for" },
-        company: { type: "string", description: "Company name if detectable, else empty string" },
-        snapshot: { type: "string", description: "2-3 sentence summary of candidate fit for this role" },
+        role: { type: "string" },
+        company: { type: "string" },
+        snapshot: { type: "string" },
         fit_Score: {
           type: "object",
-          description: "Objective fit score (0-10) measuring resume vs JD alignment.",
           properties: {
             score: { type: "integer", minimum: 0, maximum: 10 },
             color: { type: "string", enum: ["green", "amber", "red"] },
-            reasoning: { type: "string", description: "1-2 sentence critical, objective justification. Do not sugarcoat missing must-have skills." },
+            reasoning: { type: "string" },
           },
           required: ["score", "color", "reasoning"],
           additionalProperties: false,
         },
+        match_score: {
+          type: "object",
+          description: "Weighted custom match score (0-100) based on recruiter skill weights.",
+          properties: {
+            score: { type: "integer", minimum: 0, maximum: 100 },
+            color: { type: "string", enum: ["green", "amber", "red"] },
+            reasoning: { type: "string" },
+            dealbreakers_missed: { type: "array", items: { type: "string" } },
+          },
+          required: ["score", "color", "reasoning", "dealbreakers_missed"],
+          additionalProperties: false,
+        },
         questions: {
           type: "array",
-          description: "8-12 likely interview questions, prioritized",
           items: {
             type: "object",
             properties: {
               question: { type: "string" },
               priority: { type: "string", enum: ["high", "medium", "low"] },
-              category: { type: "string", description: "e.g. Behavioral, Product Sense, Technical, Leadership" },
+              category: { type: "string" },
             },
             required: ["question", "priority", "category"],
             additionalProperties: false,
@@ -55,12 +71,11 @@ const tool = {
         },
         suggested_answers: {
           type: "array",
-          description: "Tailored draft answers for the top 4-6 questions, grounded in the candidate's resume",
           items: {
             type: "object",
             properties: {
               question: { type: "string" },
-              answer: { type: "string", description: "STAR-style or structured answer, 4-8 sentences" },
+              answer: { type: "string" },
             },
             required: ["question", "answer"],
             additionalProperties: false,
@@ -68,7 +83,6 @@ const tool = {
         },
         red_flags: {
           type: "array",
-          description: "Gaps or mismatches between resume and JD with how to address",
           items: {
             type: "object",
             properties: {
@@ -79,21 +93,32 @@ const tool = {
             additionalProperties: false,
           },
         },
-        talking_points: {
+        talking_points: { type: "array", items: { type: "string" } },
+        targeted_screening_questions: {
           type: "array",
-          description: "5-7 strengths/talking points to emphasize",
+          description: "3-5 specific HR screening questions targeting identified gaps/weak points.",
           items: { type: "string" },
         },
       },
-      required: ["role", "company", "snapshot", "fit_Score", "questions", "suggested_answers", "red_flags", "talking_points"],
+      required: [
+        "role",
+        "company",
+        "snapshot",
+        "fit_Score",
+        "match_score",
+        "questions",
+        "suggested_answers",
+        "red_flags",
+        "talking_points",
+        "targeted_screening_questions",
+      ],
       additionalProperties: false,
     },
   },
 };
 
-// Simple in-memory rate limiter (per edge instance). Best-effort; resets on cold start.
-const RATE_LIMIT_MAX = 5; // requests
-const RATE_LIMIT_WINDOW_MS = 60_000; // per minute
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_MS = 60_000;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(key: string): { allowed: boolean; retryAfter: number } {
@@ -110,14 +135,13 @@ function checkRateLimit(key: string): { allowed: boolean; retryAfter: number } {
   return { allowed: true, retryAfter: 0 };
 }
 
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB total payload
-const MAX_FIELD_CHARS = 50_000; // per-field cap (resume / JD)
+const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_FIELD_CHARS = 50_000;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Rate limit by client IP (best-effort)
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
       req.headers.get("cf-connecting-ip") ||
@@ -128,32 +152,27 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: `Rate limit exceeded. Try again in ${rl.retryAfter}s.` }),
         {
           status: 429,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-            "Retry-After": String(rl.retryAfter),
-          },
+          headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(rl.retryAfter) },
         },
       );
     }
 
-    // Enforce payload size limit (5 MB)
     const contentLength = Number(req.headers.get("content-length") || 0);
     if (contentLength && contentLength > MAX_BYTES) {
-      return new Response(
-        JSON.stringify({ error: "Payload too large. Maximum 5 MB." }),
-        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Payload too large. Maximum 5 MB." }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     const rawBody = await req.text();
     if (rawBody.length > MAX_BYTES) {
-      return new Response(
-        JSON.stringify({ error: "Payload too large. Maximum 5 MB." }),
-        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Payload too large. Maximum 5 MB." }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const { resume, jobDescription, userApiKey, userProvider } = JSON.parse(rawBody);
+    const { resume, jobDescription, skillWeights, userApiKey, userProvider } = JSON.parse(rawBody);
 
     if (!resume || !jobDescription) {
       return new Response(JSON.stringify({ error: "resume and jobDescription are required" }), {
@@ -161,14 +180,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     if (typeof resume !== "string" || typeof jobDescription !== "string") {
       return new Response(JSON.stringify({ error: "resume and jobDescription must be strings" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     if (resume.length > MAX_FIELD_CHARS || jobDescription.length > MAX_FIELD_CHARS) {
       return new Response(
         JSON.stringify({ error: `Input too large. Maximum ${MAX_FIELD_CHARS} characters per field.` }),
@@ -176,7 +193,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    const userPrompt = `=== RESUME ===\n${resume}\n\n=== JOB DESCRIPTION ===\n${jobDescription}\n\nProduce the interview prep brief now using the build_prep_brief tool.`;
+    // Validate skill weights (optional)
+    let weightsBlock = "No custom skill weights provided.";
+    const safeWeights: Array<{ skill: string; weight: number; mustHave: boolean }> = [];
+    if (Array.isArray(skillWeights)) {
+      for (const w of skillWeights.slice(0, 30)) {
+        if (!w || typeof w.skill !== "string") continue;
+        const skill = w.skill.trim().slice(0, 200);
+        if (!skill) continue;
+        const weight = Math.max(1, Math.min(5, Math.round(Number(w.weight) || 3)));
+        const mustHave = Boolean(w.mustHave);
+        safeWeights.push({ skill, weight, mustHave });
+      }
+      if (safeWeights.length) {
+        weightsBlock = safeWeights
+          .map(
+            (w, i) =>
+              `${i + 1}. ${w.skill} — ${w.mustHave ? "DEALBREAKER (must-have)" : `weight ${w.weight}/5`}`,
+          )
+          .join("\n");
+      }
+    }
+
+    const userPrompt = `=== RESUME ===\n${resume}\n\n=== JOB DESCRIPTION ===\n${jobDescription}\n\n=== CUSTOM SKILL WEIGHTS ===\n${weightsBlock}\n\nProduce the screening brief now using the build_prep_brief tool. Remember: match_score MUST penalize unmet dealbreakers heavily and reflect the weighted skills above.`;
 
     let url = "https://ai.gateway.lovable.dev/v1/chat/completions";
     let apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -227,10 +266,10 @@ Deno.serve(async (req) => {
         });
       }
       if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Add credits in Lovable Cloud settings." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Add credits in Lovable Cloud settings." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
       return new Response(JSON.stringify({ error: "AI request failed" }), {
         status: 500,
@@ -250,33 +289,48 @@ Deno.serve(async (req) => {
 
     const brief = JSON.parse(toolCall.function.arguments);
 
-    // Defensive fallback: guarantee fit_Score is present and well-formed
-    const fs = brief.fit_Score;
+    // Defensive: fit_Score
     const validColor = (c: unknown) => c === "green" || c === "amber" || c === "red";
-    if (
-      !fs ||
-      typeof fs.score !== "number" ||
-      !validColor(fs.color) ||
-      typeof fs.reasoning !== "string"
-    ) {
+    const fs = brief.fit_Score;
+    if (!fs || typeof fs.score !== "number" || !validColor(fs.color) || typeof fs.reasoning !== "string") {
       const score = typeof fs?.score === "number" ? Math.max(0, Math.min(10, Math.round(fs.score))) : 5;
-      const color = score >= 8 ? "green" : score >= 5 ? "amber" : "red";
       brief.fit_Score = {
         score,
-        color,
-        reasoning:
-          typeof fs?.reasoning === "string" && fs.reasoning.trim()
-            ? fs.reasoning
-            : "Fit score auto-derived: model did not return a structured score. Review resume vs JD manually for must-have skill coverage.",
+        color: score >= 8 ? "green" : score >= 5 ? "amber" : "red",
+        reasoning: typeof fs?.reasoning === "string" && fs.reasoning.trim()
+          ? fs.reasoning
+          : "Fit score auto-derived: model did not return a structured score.",
       };
     } else {
-      // Re-align color to score band to keep them consistent.
       const s = Math.max(0, Math.min(10, Math.round(fs.score)));
-      brief.fit_Score = {
+      brief.fit_Score = { score: s, color: s >= 8 ? "green" : s >= 5 ? "amber" : "red", reasoning: fs.reasoning };
+    }
+
+    // Defensive: match_score
+    const ms = brief.match_score;
+    if (!ms || typeof ms.score !== "number" || !validColor(ms.color)) {
+      const s = brief.fit_Score.score * 10;
+      brief.match_score = {
         score: s,
-        color: s >= 8 ? "green" : s >= 5 ? "amber" : "red",
-        reasoning: fs.reasoning,
+        color: s >= 75 ? "green" : s >= 45 ? "amber" : "red",
+        reasoning: typeof ms?.reasoning === "string" ? ms.reasoning : "Derived from fit score (no custom weights or invalid model output).",
+        dealbreakers_missed: Array.isArray(ms?.dealbreakers_missed) ? ms.dealbreakers_missed : [],
       };
+    } else {
+      const s = Math.max(0, Math.min(100, Math.round(ms.score)));
+      brief.match_score = {
+        score: s,
+        color: s >= 75 ? "green" : s >= 45 ? "amber" : "red",
+        reasoning: ms.reasoning ?? "",
+        dealbreakers_missed: Array.isArray(ms.dealbreakers_missed) ? ms.dealbreakers_missed : [],
+      };
+    }
+
+    // Defensive: targeted_screening_questions
+    if (!Array.isArray(brief.targeted_screening_questions) || brief.targeted_screening_questions.length === 0) {
+      brief.targeted_screening_questions = (brief.red_flags || []).slice(0, 5).map((rf: { gap: string }) =>
+        `Can you walk me through your experience with ${rf.gap}? Please give a specific example with measurable outcomes.`,
+      );
     }
 
     return new Response(JSON.stringify({ brief }), {
