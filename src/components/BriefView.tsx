@@ -77,17 +77,35 @@ export const BriefView = ({ brief, createdAt }: Props) => {
                 {brief.fit_Score && (
                   <Alert className={`my-4 ${fitScoreStyles(brief.fit_Score.color)}`}>
                     <Gauge className="h-4 w-4" />
-                    <AlertTitle className="flex items-center gap-2 font-semibold">
+                    <AlertTitle className="flex items-center gap-2 font-semibold flex-wrap">
                       Fit Score
                       <Badge className={fitBadgeStyles(brief.fit_Score.color)}>
                         {brief.fit_Score.score}/10
                       </Badge>
-                      <span className="text-xs uppercase tracking-wider opacity-80">
-                        {brief.fit_Score.color}
-                      </span>
+                      {brief.match_score && (
+                        <>
+                          <span className="text-xs opacity-60">·</span>
+                          <span className="text-xs uppercase tracking-wider opacity-80">Weighted Match</span>
+                          <Badge className={fitBadgeStyles(brief.match_score.color)}>
+                            {brief.match_score.score}/100
+                          </Badge>
+                        </>
+                      )}
                     </AlertTitle>
                     <AlertDescription className="mt-1 leading-relaxed">
                       {brief.fit_Score.reasoning}
+                      {brief.match_score && (
+                        <span className="block mt-2 text-sm">
+                          <span className="font-semibold">Weighted: </span>
+                          {brief.match_score.reasoning}
+                        </span>
+                      )}
+                      {brief.match_score?.dealbreakers_missed?.length ? (
+                        <span className="block mt-2 text-sm">
+                          <span className="font-semibold">Dealbreakers missed: </span>
+                          {brief.match_score.dealbreakers_missed.join(", ")}
+                        </span>
+                      ) : null}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -100,6 +118,25 @@ export const BriefView = ({ brief, createdAt }: Props) => {
           })()}
         </div>
       </div>
+
+      {/* Screening Strategy */}
+      {brief.targeted_screening_questions && brief.targeted_screening_questions.length > 0 && (
+        <section className="card-soft p-6">
+          <h2 className="flex items-center gap-2 text-lg font-semibold mb-2">
+            <Crosshair className="w-5 h-5 text-primary" /> Screening Strategy
+          </h2>
+          <p className="text-xs text-muted-foreground mb-4">
+            Targeted HR questions to probe gaps and weak points identified between this resume and the JD.
+          </p>
+          <ol className="space-y-2 list-decimal pl-5">
+            {brief.targeted_screening_questions.map((q, i) => (
+              <li key={i} className="text-foreground leading-relaxed pl-1">
+                {q}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       {/* Talking points */}
       <section className="card-soft p-6">
