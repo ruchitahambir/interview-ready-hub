@@ -2,7 +2,7 @@ import { PrepBrief } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertTriangle, MessageSquare, Sparkles, Target, Gauge } from "lucide-react";
+import { AlertTriangle, MessageSquare, Sparkles, Target, Gauge, ClipboardList, Crosshair } from "lucide-react";
 
 interface Props {
   brief: PrepBrief;
