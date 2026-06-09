@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Brief from "./pages/Brief.tsx";
+import Batch from "./pages/Batch.tsx";
 import History from "./pages/History.tsx";
 import Settings from "./pages/Settings.tsx";
 
@@ -20,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/brief/:id" element={<Brief />} />
+          <Route path="/batch/:id" element={<Batch />} />
           <Route path="/history" element={<History />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
