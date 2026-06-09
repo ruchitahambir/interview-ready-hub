@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/AppHeader";
 import { UploadCard } from "@/components/UploadCard";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { BatchUploadCard, CandidateFile } from "@/components/BatchUploadCard";
+import { SkillWeights } from "@/components/SkillWeights";
+import { BatchProgress, BatchProgressItem } from "@/components/BatchProgress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,91 +15,168 @@ const N8N_WEBHOOK_URL = "https://sabaf16417.app.n8n.cloud/webhook/Generate-Prep-
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 import { supabase } from "@/integrations/supabase/client";
 import { getSettings } from "@/lib/settings";
-import { saveBrief } from "@/lib/history";
-import { PrepBrief, SavedBrief } from "@/lib/types";
+import { saveBrief, saveBatch } from "@/lib/history";
+import { PrepBrief, SavedBrief, SavedBatch, SkillWeight, BatchCandidate } from "@/lib/types";
 import { toast } from "sonner";
+
+const CONCURRENCY = 4;
 
 const Index = () => {
   const navigate = useNavigate();
-  const [resume, setResume] = useState("");
-  const [resumeName, setResumeName] = useState("");
+  const [candidates, setCandidates] = useState<CandidateFile[]>([]);
   const [jd, setJd] = useState("");
   const [jdName, setJdName] = useState("");
   const [email, setEmail] = useState("");
+  const [skillWeights, setSkillWeights] = useState<SkillWeight[]>([]);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<BatchProgressItem[]>([]);
 
+  const validCandidates = candidates.filter((c) => c.text.trim().length > 50);
   const canSubmit =
-    resume.trim().length > 50 &&
+    validCandidates.length > 0 &&
     jd.trim().length > 50 &&
     isValidEmail(email) &&
     !loading;
 
-  const handleGenerate = async () => {
-    if (!canSubmit) return;
-    setLoading(true);
+  const processCandidate = async (
+    cand: CandidateFile,
+    settings: ReturnType<typeof getSettings>,
+  ): Promise<{ brief?: PrepBrief; error?: string }> => {
     try {
-      const settings = getSettings();
       const { data, error } = await supabase.functions.invoke("generate-brief", {
         body: {
-          resume,
+          resume: cand.text,
           jobDescription: jd,
+          skillWeights,
           userApiKey: settings.apiKey || undefined,
           userProvider: settings.apiKey ? settings.provider : undefined,
         },
       });
-
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
+      return { brief: (data as { brief: PrepBrief }).brief };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "Failed" };
+    }
+  };
 
-      const brief = (data as { brief: PrepBrief }).brief;
-      const id = crypto.randomUUID();
+  const handleGenerate = async () => {
+    if (!canSubmit) return;
+    setLoading(true);
+
+    const initial: BatchProgressItem[] = validCandidates.map((c) => ({
+      name: c.name,
+      status: "pending",
+    }));
+    setProgress(initial);
+
+    const settings = getSettings();
+    const results: { candidate: CandidateFile; brief?: PrepBrief; error?: string }[] =
+      new Array(validCandidates.length);
+
+    let cursor = 0;
+    const worker = async () => {
+      while (true) {
+        const idx = cursor++;
+        if (idx >= validCandidates.length) return;
+        setProgress((prev) => {
+          const next = prev.slice();
+          next[idx] = { ...next[idx], status: "processing" };
+          return next;
+        });
+        const cand = validCandidates[idx];
+        const res = await processCandidate(cand, settings);
+        results[idx] = { candidate: cand, ...res };
+        setProgress((prev) => {
+          const next = prev.slice();
+          next[idx] = { ...next[idx], status: res.error ? "error" : "done" };
+          return next;
+        });
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, validCandidates.length) }, () => worker()),
+    );
+
+    // Save each successful brief and build batch
+    const batchId = crypto.randomUUID();
+    const batchCandidates: BatchCandidate[] = [];
+    let jobTitle = "";
+
+    for (const r of results) {
+      if (r.error || !r.brief) {
+        batchCandidates.push({
+          briefId: crypto.randomUUID(),
+          candidateName: r.candidate.name,
+          fitScore: 0,
+          matchScore: 0,
+          color: "red",
+          error: r.error,
+        });
+        continue;
+      }
+      const briefId = crypto.randomUUID();
+      const brief = r.brief;
+      if (!jobTitle) jobTitle = brief.role + (brief.company ? ` · ${brief.company}` : "");
       const saved: SavedBrief = {
-        id,
+        id: briefId,
         createdAt: new Date().toISOString(),
-        title: brief.role + (brief.company ? ` · ${brief.company}` : ""),
+        title: `${r.candidate.name} — ${brief.role}`,
         brief,
-        resumePreview: resume.slice(0, 200),
+        resumePreview: r.candidate.text.slice(0, 200),
         jdPreview: jd.slice(0, 200),
+        candidateName: r.candidate.name,
+        batchId,
       };
       saveBrief(saved);
-
-      // Fire-and-forward to n8n webhook (don't block navigation on failure)
-      try {
-        if (!N8N_WEBHOOK_URL.startsWith("PASTE_")) {
-          const briefText = JSON.stringify(brief, null, 2);
-          await fetch(N8N_WEBHOOK_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userEmail: email,
-              generatedBrief: briefText,
-              fit_Score: brief.fit_Score,
-            }),
-          });
-          // With no-cors, response is opaque — assume success if no exception
-          toast.success("Brief sent to your email!");
-        } else {
-          console.warn("N8N webhook URL not configured.");
-        }
-      } catch (webhookErr) {
-        console.error("Webhook error:", webhookErr);
-        toast.error("Email delivery failed. Brief is saved.");
-      }
-
-      navigate(`/brief/${id}`);
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "Failed to generate brief");
-      setLoading(false);
+      batchCandidates.push({
+        briefId,
+        candidateName: r.candidate.name,
+        fitScore: brief.fit_Score?.score ?? 0,
+        matchScore: brief.match_score?.score ?? (brief.fit_Score ? brief.fit_Score.score * 10 : 0),
+        color: brief.match_score?.color ?? brief.fit_Score?.color ?? "amber",
+      });
     }
+
+    const batch: SavedBatch = {
+      id: batchId,
+      createdAt: new Date().toISOString(),
+      jobTitle: jobTitle || "Candidate Screening",
+      jdPreview: jd.slice(0, 200),
+      candidates: batchCandidates,
+      skillWeights,
+    };
+    saveBatch(batch);
+
+    // Fire-and-forward summary to n8n webhook
+    try {
+      if (!N8N_WEBHOOK_URL.startsWith("PASTE_")) {
+        await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userEmail: email,
+            jobTitle: batch.jobTitle,
+            candidates: batchCandidates,
+            skillWeights,
+          }),
+        });
+        toast.success("Ranking sent to your email!");
+      }
+    } catch (e) {
+      console.error("Webhook error:", e);
+    }
+
+    navigate(`/batch/${batchId}`);
   };
 
   if (loading) {
     return (
       <>
         <AppHeader />
-        <LoadingScreen />
+        <BatchProgress items={progress} />
       </>
     );
   }
@@ -122,15 +201,7 @@ const Index = () => {
         </section>
 
         <section className="grid md:grid-cols-2 gap-5">
-          <UploadCard
-            label="Your Resume"
-            description="PDF, DOCX, DOC, TXT — or paste plain text"
-            value={resume}
-            onChange={setResume}
-            fileName={resumeName}
-            onFileNameChange={setResumeName}
-            placeholder="Paste your resume contents here…"
-          />
+          <BatchUploadCard candidates={candidates} onChange={setCandidates} />
           <UploadCard
             label="Job Description"
             description="Paste the JD or upload a file from the company"
@@ -142,9 +213,13 @@ const Index = () => {
           />
         </section>
 
+        <section className="mt-5">
+          <SkillWeights value={skillWeights} onChange={setSkillWeights} />
+        </section>
+
         <div className="mt-8 max-w-md mx-auto space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
-            Your email (to receive the brief)
+            Your email (to receive the ranking)
           </Label>
           <Input
             id="email"
@@ -166,18 +241,18 @@ const Index = () => {
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating…
+                Screening…
               </>
             ) : (
               <>
-                Generate Prep Brief
+                Rank {validCandidates.length > 0 ? validCandidates.length : ""} Candidate{validCandidates.length !== 1 ? "s" : ""}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </>
             )}
           </Button>
           {!canSubmit && !loading && (
             <p className="text-xs text-muted-foreground">
-              Add your resume, the job description, and a valid email to continue.
+              Add at least one resume, the job description, and a valid email to continue.
             </p>
           )}
         </div>
